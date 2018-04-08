@@ -264,6 +264,7 @@ void LtePhyBase::sendMulticast(LteAirFrame *frame)
             EV << NOW << " LtePhyBase::sendMulticast - sending frame to node " << nodeIt->first << endl;
 
             sendDirect(frame->dup(), 0, frame->getDuration(), receiver, "radioIn");
+            sendDirect(frame->dup(), 0, frame->getDuration(), receiver, getReceiverGateIndex(receiver));
         }
     }
 
@@ -292,7 +293,11 @@ void LtePhyBase::sendUnicast(LteAirFrame *frame)
     }
     // get a pointer to receiving module
     cModule *receiver = getSimulation()->getModule(destOmnetId);
-    // receiver's gate
+    sendDirect(frame, 0, frame->getDuration(), receiver, getReceiverGateIndex(receiver));
+}
+
+int LtePhyBase::getReceiverGateIndex(const omnetpp::cModule *receiver) const
+{
     int gateIdx = receiver->findGate("radioIn");
     if (gateIdx < 0) {
         gateIdx = receiver->findGate("lteRadioIn");
@@ -300,7 +305,5 @@ void LtePhyBase::sendUnicast(LteAirFrame *frame)
             throw cRuntimeError("receiver \"%s\" has no suitable radio gate", receiver->getFullPath().c_str());
         }
     }
-    sendDirect(frame, 0, frame->getDuration(), receiver, gateIdx);
-
-    return;
+    return gateIdx;
 }
