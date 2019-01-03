@@ -1,7 +1,9 @@
-
 #include "apps/burst/BurstReceiver.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
 
 Define_Module(BurstReceiver);
+
+using namespace omnetpp;
 
 BurstReceiver::~BurstReceiver()
 {
@@ -12,7 +14,7 @@ void BurstReceiver::initialize(int stage)
 {
     cSimpleModule::initialize(stage);
 
-    if (stage == INITSTAGE_LOCAL)
+    if (stage == inet::INITSTAGE_LOCAL)
     {
         mInit_ = true;
 
@@ -23,7 +25,7 @@ void BurstReceiver::initialize(int stage)
         burstRcvdPkt_ = registerSignal("burstRcvdPkt");
         burstPktDelay_ = registerSignal("burstPktDelay");
     }
-    else if (stage == INITSTAGE_APPLICATION_LAYER)
+    else if (stage == inet::INITSTAGE_APPLICATION_LAYER)
     {
         int port = par("localPort");
         EV << "BurstReceiver::initialize - binding to port: local:" << port << endl;
@@ -40,7 +42,9 @@ void BurstReceiver::handleMessage(cMessage *msg)
     if (msg->isSelfMessage())
         return;
 
-    BurstPacket* pPacket = check_and_cast<BurstPacket*>(msg);
+    auto packet = check_and_cast<inet::Packet*>(msg);
+    auto chunk = packet->popAtFront<inet::cPacketChunk>();
+    auto pPacket = check_and_cast<BurstPacket*>(chunk->getPacket());
 
     if (pPacket == 0)
         throw cRuntimeError("BurstReceiver::handleMessage - FATAL! Error when casting to Cbr packet");

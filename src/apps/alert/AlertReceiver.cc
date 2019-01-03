@@ -8,9 +8,12 @@
 //
 
 #include "apps/alert/AlertReceiver.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
 #include "inet/common/ModuleAccess.h"  // for multicast support
 
 Define_Module(AlertReceiver);
+
+using namespace omnetpp;
 
 void AlertReceiver::initialize(int stage)
 {
@@ -45,7 +48,9 @@ void AlertReceiver::handleMessage(cMessage *msg)
 {
     if (msg->isSelfMessage())
         return;
-    AlertPacket* pkt = check_and_cast<AlertPacket*>(msg);
+    auto packet = check_and_cast<inet::Packet*>(msg);
+    auto chunk = packet->popAtFront<inet::cPacketChunk>();
+    AlertPacket* pkt = check_and_cast<AlertPacket*>(chunk->getPacket());
 
     if (pkt == 0)
         throw cRuntimeError("AlertReceiver::handleMessage - FATAL! Error when casting to AlertPacket");

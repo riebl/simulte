@@ -9,7 +9,9 @@
 //
 
 #include "apps/vod/VoDUDPClient.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
 
+using namespace omnetpp;
 using namespace std;
 
 Define_Module(VoDUDPClient);
@@ -127,7 +129,12 @@ void VoDUDPClient::handleMessage(cMessage* msg)
         delete msg;
     }
     else if (!strcmp(msg->getName(), "VoDPacket"))
-        receiveStream((VoDPacket*) (msg));
+    {
+        auto packet = check_and_cast<inet::Packet*>(msg);
+        auto chunk = packet->popAtFront<inet::cPacketChunk>();
+        receiveStream(check_and_cast<VoDPacket*>(chunk->getPacket()));
+        delete msg;
+    }
     else
         delete msg;
 }
@@ -163,6 +170,4 @@ void VoDUDPClient::receiveStream(VoDPacket *msg)
         emit(delayLayer3_, delay.dbl());
     }
     //    outfile << seqNum << "\t" << frameLength << "\t" << delay << endl;
-
-    delete msg;
 }

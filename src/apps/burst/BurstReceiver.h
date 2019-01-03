@@ -5,16 +5,14 @@
 #include <omnetpp.h>
 
 #include "inet/common/INETDefs.h"
-#include "inet/transportlayer/contract/udp/UDPSocket.h"
+#include "inet/transportlayer/contract/udp/UdpSocket.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 
 #include "BurstPacket_m.h"
 
-using namespace inet;
-
-class BurstReceiver : public cSimpleModule
+class BurstReceiver : public omnetpp::cSimpleModule
 {
-    UDPSocket socket;
+  inet::UdpSocket socket;
 
     ~BurstReceiver();
 
@@ -23,14 +21,14 @@ class BurstReceiver : public cSimpleModule
 
     bool mInit_;
 
-    simsignal_t burstRcvdPkt_;
-    simsignal_t burstPktDelay_;
+    omnetpp::simsignal_t burstRcvdPkt_;
+    omnetpp::simsignal_t burstPktDelay_;
 
   protected:
 
-    virtual int numInitStages() const override { return NUM_INIT_STAGES; }
-    void initialize(int stage);
-    void handleMessage(cMessage *msg);
+    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void handleMessage(omnetpp::cMessage *msg) override;
 };
 
 #endif

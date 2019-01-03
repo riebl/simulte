@@ -1,7 +1,10 @@
 
 #include "CbrReceiver.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
 
 Define_Module(CbrReceiver);
+
+using namespace omnetpp;
 
 simsignal_t CbrReceiver::cbrFrameLossSignal_ = registerSignal("cbrFrameLossSignal");
 simsignal_t CbrReceiver::cbrFrameDelaySignal_ = registerSignal("cbrFrameDelaySignal");
@@ -18,7 +21,7 @@ void CbrReceiver::initialize(int stage)
 {
     cSimpleModule::initialize(stage);
 
-    if (stage == INITSTAGE_LOCAL)
+    if (stage == inet::INITSTAGE_LOCAL)
     {
         mInit_ = true;
 
@@ -28,7 +31,7 @@ void CbrReceiver::initialize(int stage)
 
         cbrRcvdPkt_ = registerSignal("cbrRcvdPkt");
     }
-    else if (stage == INITSTAGE_APPLICATION_LAYER)
+    else if (stage == inet::INITSTAGE_APPLICATION_LAYER)
     {
         int port = par("localPort");
         EV << "CbrReceiver::initialize - binding to port: local:" << port << endl;
@@ -45,7 +48,9 @@ void CbrReceiver::handleMessage(cMessage *msg)
     if (msg->isSelfMessage())
         return;
 
-    CbrPacket* pPacket = check_and_cast<CbrPacket*>(msg);
+    auto packet = check_and_cast<inet::Packet*>(msg);
+    auto chunk = packet->popAtFront<inet::cPacketChunk>();
+    CbrPacket* pPacket = check_and_cast<CbrPacket*>(chunk->getPacket());
 
     if (pPacket == 0)
     {

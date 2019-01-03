@@ -8,22 +8,20 @@
 #include <omnetpp.h>
 
 #include "inet/common/INETDefs.h"
-#include "inet/transportlayer/contract/udp/UDPSocket.h"
+#include "inet/transportlayer/contract/udp/UdpSocket.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 
 #include "BurstPacket_m.h"
 
-using namespace inet;
-
-class BurstSender : public cSimpleModule
+class BurstSender : public omnetpp::cSimpleModule
 {
-    UDPSocket socket;
+  inet::UdpSocket socket;
     //has the sender been initialized?
     bool initialized_;
 
     // timers
-    cMessage* selfBurst_;
-    cMessage* selfPacket_;
+    omnetpp::cMessage* selfBurst_;
+    omnetpp::cMessage* selfPacket_;
 
     //sender
     int idBurst_;
@@ -31,20 +29,20 @@ class BurstSender : public cSimpleModule
 
     int burstSize_;
     int size_;
-    simtime_t startTime_;
-    simtime_t interBurstTime_;
-    simtime_t intraBurstTime_;
+    omnetpp::simtime_t startTime_;
+    omnetpp::simtime_t interBurstTime_;
+    omnetpp::simtime_t intraBurstTime_;
 
-    simsignal_t burstSentPkt_;
+    omnetpp::simsignal_t burstSentPkt_;
     // ----------------------------
 
-    cMessage *selfSender_;
-    cMessage *initTraffic_;
+    omnetpp::cMessage *selfSender_;
+    omnetpp::cMessage *initTraffic_;
 
-    simtime_t timestamp_;
+    omnetpp::simtime_t timestamp_;
     int localPort_;
     int destPort_;
-    L3Address destAddress_;
+    inet::L3Address destAddress_;
 
     void initTraffic();
     void sendBurst();
@@ -56,9 +54,9 @@ class BurstSender : public cSimpleModule
 
   protected:
 
-    virtual int numInitStages() const override { return NUM_INIT_STAGES; }
-    void initialize(int stage);
-    void handleMessage(cMessage *msg);
+    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void handleMessage(omnetpp::cMessage *msg) override;
 };
 
 #endif

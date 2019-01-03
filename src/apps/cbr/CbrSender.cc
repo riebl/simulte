@@ -1,11 +1,12 @@
-
-
 #include <cmath>
 #include "CbrSender.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
 
 #define round(x) floor((x) + 0.5)
 
 Define_Module(CbrSender);
+
+using namespace omnetpp;
 
 simsignal_t CbrSender::cbrGeneratedThroughtputSignal_ = registerSignal("cbrGeneratedThroughtputSignal");
 simsignal_t CbrSender::cbrGeneratedBytesSignal_ = registerSignal("cbrGeneratedBytesSignal");
@@ -29,7 +30,7 @@ void CbrSender::initialize(int stage)
     cSimpleModule::initialize(stage);
     EV << "CBR Sender initialize: stage " << stage << " - initialize=" << initialized_ << endl;
 
-    if (stage == INITSTAGE_LOCAL)
+    if (stage == inet::INITSTAGE_LOCAL)
     {
         selfSource_ = new cMessage("selfSource");
         nframes_ = 0;
@@ -44,7 +45,7 @@ void CbrSender::initialize(int stage)
         txBytes_ = 0;
 
     }
-    else if (stage == INITSTAGE_APPLICATION_LAYER)
+    else if (stage == inet::INITSTAGE_APPLICATION_LAYER)
     {
         // calculating traffic starting time
         startTime_ = par("startTime");
@@ -114,11 +115,11 @@ void CbrSender::sendCbrPacket()
 
     emit(cbrSentPktSignal_, (long)iDframe_);
 
-    CbrPacket* packet = new CbrPacket("Cbr");
-    packet->setNframes(nframes_);
-    packet->setIDframe(iDframe_++);
-    packet->setTimestamp(simTime());
-    packet->setByteLength(size_);
+    CbrPacket* cbr = new CbrPacket("Cbr");
+    cbr->setNframes(nframes_);
+    cbr->setIDframe(iDframe_++);
+    cbr->setTimestamp(simTime());
+    cbr->setByteLength(size_);
 
     emit(cbrGeneratedBytesSignal_,size_);
 
@@ -126,6 +127,9 @@ void CbrSender::sendCbrPacket()
     {
         txBytes_ += size_;
     }
+
+    auto packet = new inet::Packet(cbr->getName());
+    packet->insertAtFront(inet::makeShared<inet::cPacketChunk>(cbr));
     socket.sendTo(packet, destAddress_, destPort_);
 
     scheduleAt(simTime() + sampling_time, selfSource_);

@@ -11,6 +11,10 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include "apps/vod/VoDUDPServer.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
+
+using namespace omnetpp;
+using namespace std;
 
 Define_Module(VoDUDPServer);
 
@@ -25,7 +29,7 @@ void VoDUDPServer::initialize(int stage)
 {
     cSimpleModule::initialize(stage);
 
-    if (stage != INITSTAGE_APPLICATION_LAYER)
+    if (stage != inet::INITSTAGE_APPLICATION_LAYER)
         return;
     EV << "VoD Server initialize: stage " << stage << endl;
     serverPort = par("localPort");
@@ -137,7 +141,7 @@ void VoDUDPServer::handleMessage(cMessage *msg)
             const char *token;
             while ((token = tokenizer.nextToken()) != NULL)
             {
-                clientAddr.push_back(L3AddressResolver().resolve(token));
+                clientAddr.push_back(inet::L3AddressResolver().resolve(token));
                 size++;
             }
 
@@ -189,7 +193,9 @@ void VoDUDPServer::handleNS2Message(cMessage *msg)
     frame->setFrameLength(length); /* Seq_num plus frame length plus payload */
     frame->setTid(0);
     frame->setQid(0);
-    socket.sendTo(frame, msgNew->getClientAddr(), msgNew->getClientPort());
+    auto packet = new inet::Packet(frame->getName());
+    packet->insertAtFront(inet::makeShared<inet::cPacketChunk>(frame));
+    socket.sendTo(packet, msgNew->getClientAddr(), msgNew->getClientPort());
 
     numPkSentApp++;
     msgNew->setNumPkSent(numPkSentApp);
@@ -206,7 +212,9 @@ void VoDUDPServer::handleSVCMessage(cMessage *msg)
     {
         /* End of file, send finish packet */
         cPacket* fm = new cPacket("VoDFinishPacket");
-        socket.sendTo(fm, msgNew->getClientAddr(), msgNew->getClientPort());
+        auto packet = new inet::Packet(fm->getName());
+        packet->insertAtFront(inet::makeShared<inet::cPacketChunk>(fm));
+        socket.sendTo(packet, msgNew->getClientAddr(), msgNew->getClientPort());
         return;
     }
     else
@@ -221,7 +229,9 @@ void VoDUDPServer::handleSVCMessage(cMessage *msg)
         frame->setTid(svcTrace_[numPkSentApp].tid);
         frame->setQid(svcTrace_[numPkSentApp].qid);
         frame->setFrameLength(svcTrace_[numPkSentApp].length + 2 * sizeof(int)); /* Seq_num plus frame length plus payload */
-        socket.sendTo(frame, msgNew->getClientAddr(), msgNew->getClientPort());
+        auto packet = new inet::Packet(frame->getName());
+        packet->insertAtFront(inet::makeShared<inet::cPacketChunk>(frame));
+        socket.sendTo(packet, msgNew->getClientAddr(), msgNew->getClientPort());
         numPkSentApp++;
         while (1)
         {
@@ -241,7 +251,9 @@ void VoDUDPServer::handleSVCMessage(cMessage *msg)
             frame->setTimestamp(simTime());
             frame->setByteLength(svcTrace_[numPkSentApp].length);
             frame->setFrameLength(svcTrace_[numPkSentApp].length + 2 * sizeof(int)); /* Seq_num plus frame length plus payload */
-            socket.sendTo(frame, msgNew->getClientAddr(), msgNew->getClientPort());
+            auto packet = new inet::Packet(frame->getName());
+            packet->insertAtFront(inet::makeShared<inet::cPacketChunk>(frame));
+            socket.sendTo(packet, msgNew->getClientAddr(), msgNew->getClientPort());
             EV << " VoDUDPServer::handleSVCMessage sending frame " << seq_num << std::endl;
             numPkSentApp++;
         }

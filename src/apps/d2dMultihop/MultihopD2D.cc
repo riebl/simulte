@@ -13,10 +13,13 @@
 #include "apps/d2dMultihop/TrickleTimerMsg_m.h"
 #include "stack/mac/layer/LteMacBase.h"
 #include "inet/common/ModuleAccess.h"  // for multicast support
+#include "inet/common/packet/chunk/cPacketChunk.h"
 
 #define round(x) floor((x) + 0.5)
 
 Define_Module(MultihopD2D);
+
+using namespace omnetpp;
 
 uint16_t MultihopD2D::numMultihopD2DApps = 0;
 
@@ -44,7 +47,7 @@ MultihopD2D::~MultihopD2D()
 void MultihopD2D::initialize(int stage)
 {
     // avoid multiple initializations
-    if (stage == INITSTAGE_APPLICATION_LAYER )
+    if (stage == inet::INITSTAGE_APPLICATION_LAYER )
     {
         EV << "MultihopD2D initialize: stage " << stage << endl;
 
@@ -165,7 +168,9 @@ void MultihopD2D::sendPacket()
     }
 
     EV << "MultihopD2D::sendPacket - Sending msg "<< packet->getMsgid() <<  endl;
-    socket.sendTo(packet, destAddress_, destPort_);
+    auto inet_packet = new inet::Packet(packet->getName());
+    inet_packet->insertAtFront(inet::makeShared<inet::cPacketChunk>(packet));
+    socket.sendTo(inet_packet, destAddress_, destPort_);
 
     std::set<MacNodeId> targetSet;
     eventGen_->computeTargetNodeSet(targetSet, lteNodeId_, maxBroadcastRadius_);
@@ -294,7 +299,10 @@ void MultihopD2D::handleTrickleTimer(cMessage* msg)
 
 void MultihopD2D::relayPacket(cMessage* msg)
 {
-    MultihopD2DPacket* pkt = check_and_cast<MultihopD2DPacket*>(msg);
+    auto in_packet = check_and_cast<inet::Packet*>(msg);
+    auto in_chunk = in_packet->popAtFront<inet::cPacketChunk>();
+    const MultihopD2DPacket* in_pkt = check_and_cast<MultihopD2DPacket*>(in_chunk->getPacket());
+    auto pkt = in_pkt->dup();
 
     // increase the number of hops
     unsigned int hops = pkt->getHops();
@@ -310,7 +318,9 @@ void MultihopD2D::relayPacket(cMessage* msg)
     pkt->setLastHopSenderId(lteNodeId_);
 
     EV << "MultihopD2D::relayPacket - Relay msg " << pkt->getMsgid() << " to address " << destAddress_ << endl;
-    socket.sendTo(pkt, destAddress_, destPort_);
+    auto out_packet = new inet::Packet(pkt->getName());
+    out_packet->insertAtFront(inet::makeShared<inet::cPacketChunk>(pkt));
+    socket.sendTo(out_packet, destAddress_, destPort_);
 
     markAsRelayed(pkt->getMsgid());    // mark the message as relayed
 

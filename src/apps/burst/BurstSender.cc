@@ -1,10 +1,13 @@
 
 #include <cmath>
 #include "apps/burst/BurstSender.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
 
 #define round(x) floor((x) + 0.5)
 
 Define_Module(BurstSender);
+
+using namespace omnetpp;
 
 BurstSender::BurstSender()
 {
@@ -27,7 +30,7 @@ void BurstSender::initialize(int stage)
     cSimpleModule::initialize(stage);
     EV << "BurstSender initialize: stage " << stage << " - initialize=" << initialized_ << endl;
 
-    if (stage == INITSTAGE_LOCAL)
+    if (stage == inet::INITSTAGE_LOCAL)
     {
         selfBurst_ = new cMessage("selfBurst");
         selfPacket_ = new cMessage("selfPacket");
@@ -43,7 +46,7 @@ void BurstSender::initialize(int stage)
 
         burstSentPkt_ = registerSignal("burstSentPkt");
     }
-    else if (stage == INITSTAGE_APPLICATION_LAYER)
+    else if (stage == inet::INITSTAGE_APPLICATION_LAYER)
     {
         initTraffic_ = new cMessage("initTraffic");
         initTraffic();
@@ -119,11 +122,13 @@ void BurstSender::sendPacket()
     //unsigned int msgId = (idBurst_ << 16) | idFrame_;
     unsigned int msgId = (idBurst_ * burstSize_) + idFrame_;
 
-    BurstPacket* packet = new BurstPacket("Burst");
-    packet->setMsgId(msgId);
-    packet->setTimestamp(simTime());
-    packet->setByteLength(size_);
+    BurstPacket* burst = new BurstPacket("Burst");
+    burst->setMsgId(msgId);
+    burst->setTimestamp(simTime());
+    burst->setByteLength(size_);
 
+    auto packet = new inet::Packet(burst->getName());
+    packet->insertAtFront(inet::makeShared<inet::cPacketChunk>(burst));
     socket.sendTo(packet, destAddress_, destPort_);
 
     emit(burstSentPkt_, (long)msgId);

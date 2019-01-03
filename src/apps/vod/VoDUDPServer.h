@@ -14,27 +14,23 @@
 #include <omnetpp.h>
 #include <fstream>
 #include "apps/vod/VoDUDPStruct.h"
-#include "inet/transportlayer/contract/udp/UDPControlInfo_m.h"
 #include "apps/vod/VoDPacket_m.h"
 #include "apps/vod/M1Message_m.h"
-#include "inet/transportlayer/contract/udp/UDPSocket.h"
+#include "inet/transportlayer/contract/udp/UdpSocket.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 
-using namespace std;
-using namespace inet;
-
-class VoDUDPServer : public cSimpleModule
+class VoDUDPServer : public omnetpp::cSimpleModule
 {
   protected:
-    UDPSocket socket;
+    inet::UdpSocket socket;
     /* Server parameters */
 
     int serverPort;
-    ifstream infile;
-    string inputFileName;
+    std::ifstream infile;
+    std::string inputFileName;
     int fps;
-    string traceType;
-    fstream outfile;
+    std::string traceType;
+    std::fstream outfile;
     double TIME_SLOT;
 
     const char * clientsIP;
@@ -42,12 +38,12 @@ class VoDUDPServer : public cSimpleModule
     double clientsStartStreamTime;
     const char * clientsReqTime;
 
-    std::vector<string> vclientsIP;
+    std::vector<std::string> vclientsIP;
 
     std::vector<int> vclientsPort;
     std::vector<double> vclientsStartStreamTime;
     std::vector<double> vclientsReqTime;
-    std::vector<L3Address> clientAddr;
+    std::vector<inet::L3Address> clientAddr;
 
     /* Statistics */
 
@@ -68,11 +64,11 @@ class VoDUDPServer : public cSimpleModule
         int frameNumber;
         int timestamp;
         int currentFrame;
-        string memoryAdd;
-        string isDiscardable;
-        string isTruncatable;
-        string isControl;
-        string frameType;
+        std::string memoryAdd;
+        std::string isDiscardable;
+        std::string isTruncatable;
+        std::string isControl;
+        std::string frameType;
         long int index;
     };
     unsigned int nrec_;
@@ -87,12 +83,12 @@ class VoDUDPServer : public cSimpleModule
 
   protected:
 
-    void initialize(int stage);
-    virtual int numInitStages() const { return inet::NUM_INIT_STAGES; }
-    virtual void finish();
-    virtual void handleMessage(cMessage*);
-    virtual void handleNS2Message(cMessage*);
-    virtual void handleSVCMessage(cMessage*);
+    void initialize(int stage) override;
+    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    virtual void finish() override;
+    virtual void handleMessage(omnetpp::cMessage*) override;
+    virtual void handleNS2Message(omnetpp::cMessage*);
+    virtual void handleSVCMessage(omnetpp::cMessage*);
 };
 
 #endif

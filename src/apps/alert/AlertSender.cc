@@ -9,11 +9,14 @@
 
 #include <cmath>
 #include "apps/alert/AlertSender.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
 #include "inet/common/ModuleAccess.h"  // for multicast support
 
 #define round(x) floor((x) + 0.5)
 
 Define_Module(AlertSender);
+
+using namespace omnetpp;
 
 AlertSender::AlertSender()
 {
@@ -86,12 +89,14 @@ void AlertSender::handleMessage(cMessage *msg)
 
 void AlertSender::sendAlertPacket()
 {
-    AlertPacket* packet = new AlertPacket("Alert");
-    packet->setSno(nextSno_);
-    packet->setTimestamp(simTime());
-    packet->setByteLength(size_);
+    AlertPacket* alert = new AlertPacket("Alert");
+    alert->setSno(nextSno_);
+    alert->setTimestamp(simTime());
+    alert->setByteLength(size_);
     EV << "AlertSender::sendAlertPacket - Sending message [" << nextSno_ << "]\n";
 
+    auto packet = new inet::Packet(alert->getName());
+    packet->insertAtFront(inet::makeShared<inet::cPacketChunk>(alert));
     socket.sendTo(packet, destAddress_, destPort_);
     nextSno_++;
 

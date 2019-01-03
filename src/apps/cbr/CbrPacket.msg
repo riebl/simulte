@@ -7,8 +7,6 @@
 // and cannot be removed from it.
 //
 
-namespace inet;
-
 //
 // Packet used by the ~VoPSender and ~VoIPReceiver modules.
 //

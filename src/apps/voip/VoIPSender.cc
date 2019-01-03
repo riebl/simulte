@@ -9,6 +9,9 @@
 
 #include <cmath>
 #include "apps/voip/VoIPSender.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
+
+using namespace omnetpp;
 
 #define round(x) floor((x) + 0.5)
 
@@ -28,7 +31,7 @@ VoIPSender::~VoIPSender()
 
 void VoIPSender::initialize(int stage)
 {
-    EV << "VoIP Sender initialize: stage " << stage << endl;
+    EV << "VoIP Sender initialize: stage " << stage << std::endl;
 
     cSimpleModule::initialize(stage);
 
@@ -167,8 +170,9 @@ void VoIPSender::sendVoIPPacket()
     packet->setTimestamp(simTime());
     packet->setByteLength(size_);
     EV << "VoIPSender::sendVoIPPacket - Talkspurt[" << iDtalk_-1 << "] - Sending frame[" << iDframe_ << "]\n";
-
-    socket.sendTo(packet, destAddress_, destPort_);
+    auto inet_packet = new inet::Packet(packet->getName());
+    inet_packet->insertAtFront(inet::makeShared<inet::cPacketChunk>(packet));
+    socket.sendTo(inet_packet, destAddress_, destPort_);
     --nframesTmp_;
     ++iDframe_;
 

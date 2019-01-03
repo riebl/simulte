@@ -8,6 +8,9 @@
 //
 
 #include "apps/voip/VoIPReceiver.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
+
+using namespace omnetpp;
 
 Define_Module(VoIPReceiver);
 
@@ -67,7 +70,10 @@ void VoIPReceiver::handleMessage(cMessage *msg)
 {
     if (msg->isSelfMessage())
         return;
-    VoipPacket* pPacket = check_and_cast<VoipPacket*>(msg);
+
+    auto packet = check_and_cast<inet::Packet*>(msg);
+    auto chunk = packet->popAtFront<inet::cPacketChunk>();
+    VoipPacket* pPacket = check_and_cast<VoipPacket*>(chunk->getPacket());
 
     if (pPacket == 0)
     {
