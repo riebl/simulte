@@ -9,19 +9,19 @@
 
 #include "corenetwork/lteip/IP2lte.h"
 #include "corenetwork/binder/LteBinder.h"
-#include "inet/transportlayer/tcp_common/TCPSegment.h"
-#include "inet/transportlayer/udp/UDPPacket.h"
-#include "inet/transportlayer/udp/UDP.h"
+#include "inet/transportlayer/tcp_common/TcpHeader_m.h"
+#include "inet/transportlayer/udp/UdpHeader_m.h"
+#include "inet/transportlayer/udp/Udp.h"
 #include <iostream>
 
-#include "../lteCellInfo/LteCellInfo.h"
+#include "corenetwork/lteCellInfo/LteCellInfo.h"
 #include "inet/common/ModuleAccess.h"
-#include "inet/networklayer/ipv4/IPv4InterfaceData.h"
+#include "inet/common/packet/chunk/cPacketChunk.h"
 #include "inet/networklayer/common/InterfaceEntry.h"
-#include "inet/networklayer/configurator/ipv4/IPv4NetworkConfigurator.h"
-#include "inet/networklayer/ipv4/IIPv4RoutingTable.h"
+#include "inet/networklayer/ipv4/Ipv4RoutingTable.h"
 #include "stack/mac/layer/LteMacBase.h"
 
+using namespace omnetpp;
 using namespace std;
 
 Define_Module(IP2lte);
@@ -65,13 +65,13 @@ void IP2lte::initialize(int stage)
             // otherwise we are not able to reach devices outside the cellular network
             if (NOW > 0)
             {
-                IIPv4RoutingTable *irt = getModuleFromPar<IIPv4RoutingTable>(par("routingTableModule"), this);
-                IPv4Route * defaultRoute = new IPv4Route();
-                defaultRoute->setDestination(IPv4Address(inet::IPv4Address::UNSPECIFIED_ADDRESS));
-                defaultRoute->setNetmask(IPv4Address(inet::IPv4Address::UNSPECIFIED_ADDRESS));
+                inet::Ipv4RoutingTable *irt = getModuleFromPar<inet::Ipv4RoutingTable>(par("routingTableModule"), this);
+                auto* defaultRoute = new inet::Ipv4Route();
+                defaultRoute->setDestination(inet::Ipv4Address::UNSPECIFIED_ADDRESS);
+                defaultRoute->setNetmask(inet::Ipv4Address::UNSPECIFIED_ADDRESS);
 
-                IInterfaceTable *ift = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
-                InterfaceEntry * interfaceEntry = ift->getInterfaceByName("wlan");
+                inet::IInterfaceTable *ift = getModuleFromPar<inet::IInterfaceTable>(par("interfaceTableModule"), this);
+                inet::InterfaceEntry * interfaceEntry = ift->getInterfaceByName("wlan");
                 defaultRoute->setInterface(interfaceEntry);
 
                 irt->addRoute(defaultRoute);
@@ -86,17 +86,20 @@ void IP2lte::initialize(int stage)
 
 void IP2lte::handleMessage(cMessage *msg)
 {
+    auto packet = check_and_cast<inet::Packet*>(msg);
+    auto chunk = packet->popAtFront<inet::cPacketChunk>();
+
     if( nodeType_ == ENODEB )
     {
         // message from IP Layer: send to stack
         if (msg->getArrivalGate()->isName("upperLayerIn"))
         {
-            IPv4Datagram *ipDatagram = check_and_cast<IPv4Datagram *>(msg);
+            const auto *ipDatagram = check_and_cast<inet::Ipv4Header *>(chunk->getPacket());
             fromIpEnb(ipDatagram);
         }
         // message from stack: send to peer
         else if(msg->getArrivalGate()->isName("stackLte$i"))
-            toIpEnb(msg);
+            toIpEnb(chunk->getPacket());
         else
         {
             // error: drop message
@@ -154,18 +157,17 @@ void IP2lte::fromIpUe(IPv4Datagram * datagram)
     }
 }
 
-void IP2lte::toStackUe(IPv4Datagram * datagram)
+void IP2lte::toStackUe(inet::Packet* datagram)
 {
-    // obtain the encapsulated transport packet
-    cPacket * transportPacket = datagram->getEncapsulatedPacket();
+    auto ip = datagram->popAtFront<inet::Ipv4Header>();
 
     // 5-Tuple infos
     unsigned short srcPort = 0;
     unsigned short dstPort = 0;
-    int transportProtocol = datagram->getTransportProtocol();
+    int transportProtocol = ip->getProtocol();
     // TODO Add support to IPv6
-    IPv4Address srcAddr  = datagram->getSrcAddress() ,
-                destAddr = datagram->getDestAddress();
+    auto srcAddr = ip->getSrcAddress();
+    auto destAddr = ip->getDestAddress();
 
     // if needed, create a new structure for the flow
     AddressPair pair(srcAddr, destAddr);
@@ -175,19 +177,19 @@ void IP2lte::toStackUe(IPv4Datagram * datagram)
         seqNums_.insert(p);
     }
 
-    int headerSize = datagram->getHeaderLength();
+    int headerSize = ip->calculateHeaderByteLength();
 
     // inspect packet depending on the transport protocol type
     switch (transportProtocol)
     {
-        case IP_PROT_TCP:
+        case inet::IP_PROT_TCP:
             inet::tcp::TCPSegment* tcpseg;
             tcpseg = check_and_cast<inet::tcp::TCPSegment*>(transportPacket);
             srcPort = tcpseg->getSrcPort();
             dstPort = tcpseg->getDestPort();
             headerSize += tcpseg->getHeaderLength();
             break;
-        case IP_PROT_UDP:
+        case inet::IP_PROT_UDP:
             UDPPacket* udppacket;
             udppacket = check_and_cast<UDPPacket*>(transportPacket);
             srcPort = udppacket->getSourcePort();
@@ -217,7 +219,7 @@ void IP2lte::toIpUe(IPv4Datagram *datagram)
     send(datagram,ipGateOut_);
 }
 
-void IP2lte::fromIpEnb(IPv4Datagram * datagram)
+void IP2lte::fromIpEnb(inet::Ptr<IPv4Datagram * datagram)
 {
     EV << "IP2lte::fromIpEnb - message from IP layer: send to stack" << endl;
     // Remove control info from IP datagram
@@ -253,13 +255,13 @@ void IP2lte::fromIpEnb(IPv4Datagram * datagram)
     toStackEnb(datagram);
 }
 
-void IP2lte::toIpEnb(cMessage * msg)
+void IP2lte::toIpEnb(inet::Packet* packet)
 {
     EV << "IP2lte::toIpEnb - message from stack: send to IP layer" << endl;
-    send(msg,ipGateOut_);
+    send(packet, ipGateOut_);
 }
 
-void IP2lte::toStackEnb(IPv4Datagram* datagram)
+void IP2lte::toStackEnb(inet::Ipv4Header* datagram)
 {
     // obtain the encapsulated transport packet
     cPacket * transportPacket = datagram->getEncapsulatedPacket();

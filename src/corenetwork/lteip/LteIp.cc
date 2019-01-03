@@ -10,7 +10,7 @@
 #include "inet/networklayer/ipv4/IPv4InterfaceData.h"
 #include "corenetwork/lteip/LteIp.h"
 
-#include "../lteCellInfo/LteCellInfo.h"
+#include "corenetwork/lteCellInfo/LteCellInfo.h"
 #include "corenetwork/binder/LteBinder.h"
 #include "inet/common/ModuleAccess.h"
 

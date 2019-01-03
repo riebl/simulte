@@ -25,7 +25,7 @@ void LteBinder::unregisterNode(MacNodeId id)
     if(nodeIds_.erase(id) != 1){
         EV_ERROR << "Cannot unregister node - node id \"" << id << "\" - not found";
     }
-    std::map<IPv4Address, MacNodeId>::iterator it;
+    std::map<inet::Ipv4Address, MacNodeId>::iterator it;
     for(it = macNodeIdToIPAddress_.begin(); it != macNodeIdToIPAddress_.end(); )
     {
         if(it->second == id)
